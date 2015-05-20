@@ -1,32 +1,40 @@
+from common.addr_class import AddrClass
 import sys
 
 filename = sys.argv[1]
+first_address_type = sys.argv[2]
 topologia = open(filename, 'r')
 networks = []
 routers = []
 is_reading_networks = True
 
+# Parse first address and IP class
+address_aux = first_address_type.strip().split('/')
+first_address = address_aux[0]
+address_class = address_aux[1]
+
+# Removes white spaces and line endings
+def clean_line(line):
+	return line.strip().replace(" ","")
+
 # Parses networks and routers
 for line in topologia.readlines():
-	if line[0:2] == "#R":
+	if line.strip() == "#ROUTER":
 		is_reading_networks	= False
-	if line[0:1] != "#":
+	if line.strip()[0:1] != "#":
 		if is_reading_networks:
-			network	= line.split(',')
-			net_name = network[0].strip()
-			num_nodes = network[1].strip()
-			networks.append(tuple([net_name,num_nodes]))
+			network	= clean_line(line)
+			networks.append(tuple(network.split(',')))
 		else:
-			config_line	= tuple(line.split(','))
-			#<router_name>, <num_ports>, <(net|router)_name0>, <(net|router)_name1>, …, <(net|router)_nameN>
-			router_parameters = []
-			for parameter in config_line:
-				router_parameters.append(parameter.strip())
-			routers.append(tuple(router_parameters))
+			config_line = clean_line(line)
+			routers.append(tuple(config_line.split(',')))
 
 topologia.close()
 
-for network	in networks:
-	print(network)
-for router	in routers:
-	print(router)
+print(networks)
+print(routers)
+print(first_address)
+print(address_class)
+print(AddrClass.which_class(address_class))
+
+
