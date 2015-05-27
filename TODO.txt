@@ -1,6 +1,6 @@
-#TODO
-funcao que calula quantos bits sao necessarios para subredes
-funcao que calcula quantos bits sao necessarios para hosts
+﻿#TODO
 mascara = 24 bits de rede + 1 bit de subrede, todos em 1
+
 o endereco de rede da rede é o endereço dado (ex.:200.10.20.0) com o bit de subrede em todos os seus estados (todas combinações de bits ligados e desligados)
+
 o endereco do roteador é qualquer um dentro do range de hosts (normalmente o primeiro)

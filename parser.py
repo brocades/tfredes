@@ -6,6 +6,7 @@ first_address_type = sys.argv[2]
 topologia = open(filename, 'r')
 networks = []
 routers = []
+networks_bits = []
 is_reading_networks = True
 
 # Parse first address and IP class
@@ -16,6 +17,19 @@ address_class = address_aux[1]
 # Removes white spaces and line endings
 def clean_line(line):
 	return line.strip().replace(" ","")
+
+def number_of_bits(integer):
+	a = int(integer)
+	bits_length = a.bit_length()
+	pow_of_two = pow(2,bits_length)
+	if pow_of_two-2 < int(integer):
+		return bits_length + 1
+	return bits_length
+
+def list_number_of_bits(networks):
+	for net in networks:
+		min_number_of_hosts = pow(2,number_of_bits(net[1]))
+		networks_bits.append(tuple([net[0],min_number_of_hosts]))
 
 # Parses networks and routers
 for line in topologia.readlines():
@@ -31,6 +45,8 @@ for line in topologia.readlines():
 
 topologia.close()
 
+list_number_of_bits(networks)
+print(networks_bits)
 print(networks)
 print(routers)
 print(first_address)
