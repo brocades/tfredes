@@ -18,6 +18,7 @@ address_class = address_aux[1]
 def clean_line(line):
 	return line.strip().replace(" ","")
 
+# Returns the number of bits needed the represent the amount of hosts the network needs
 def number_of_bits(integer):
 	a = int(integer)
 	bits_length = a.bit_length()
@@ -26,6 +27,8 @@ def number_of_bits(integer):
 		return bits_length + 1
 	return bits_length
 
+# Returns a list with the number of bits needed to represent the amount of hosts the network needs
+# for each network
 def list_number_of_bits(networks):
 	for net in networks:
 		min_number_of_hosts = pow(2,number_of_bits(net[1]))
