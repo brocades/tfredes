@@ -8,6 +8,7 @@ networks = []
 routers = []
 networks_bits = []
 is_reading_networks = True
+default_mask_number = "255"
 
 # Parse first address and IP class
 address_aux = first_address_type.strip().split('/')
@@ -34,6 +35,23 @@ def list_number_of_bits(networks):
 		min_number_of_hosts = pow(2,number_of_bits(net[1]))
 		networks_bits.append(tuple([net[0],min_number_of_hosts]))
 
+# Tells how many bits are necessary for subnet
+def bits_for_subnetwork(integer):
+	a = int(integer)
+	return a.bit_length()
+
+
+def define_subnetmask(address_class, routers, networks_bits):
+	subnetmask_net = []
+	first_router = routers[0]
+	#for net in networks_bits:		
+	addr_class = int(address_class) + bits_for_subnetwork(first_router[1])
+	number_of_defaults = addr_class//8
+	addr_remainder = addr_class%8
+	subnetmask = (default_mask_number+".")*number_of_defaults
+	return subnetmask+
+	
+	
 # Parses networks and routers
 for line in topologia.readlines():
 	if line.strip() == "#ROUTER":
@@ -47,8 +65,8 @@ for line in topologia.readlines():
 			routers.append(tuple(config_line.split(',')))
 
 topologia.close()
-
 list_number_of_bits(networks)
+print(define_subnetmask(address_class,routers))
 print(networks_bits)
 print(networks)
 print(routers)
