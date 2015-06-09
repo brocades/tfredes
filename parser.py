@@ -118,6 +118,14 @@ g_networks = alloc.getNetworksIPs(g_networks, addressBase)
 
 g_networks = sorted(g_networks, key=lambda x: x.m_index, reverse=False)
 
+#print(addressBase.m_address)
+#print(addressBase.m_address.getOffsetAddress(1024))
+#print(addressBase.m_address.getOffsetAddress(2048))
+#print(addressBase.m_address.getOffsetAddress(25))
+#print(addressBase.m_address.getOffsetAddress(10025))
+
+#addressBase.getNetworksIPs(g_networks)
+
 print("\n" + "--- RESULT ---" + "\n")
 
 print("#NETWORK")
@@ -126,4 +134,7 @@ for network in g_networks:
 print("#ROUTER")
 for router in g_routers:
     router.getNetworks(g_networks)
-    print(router.getResultStr() + "\n")
+    print(router.getResultStr())
+print("#ROUTERTABLE")
+for router in g_routers:
+    print(router.getRouterTableResultStr())

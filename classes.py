@@ -175,10 +175,13 @@ class Router:
     m_numPorts = 0
     m_networkNames = []
     m_networks = []
+    m_routerTable = [] #collection of RouterPath
+    m_pathIndex = 0
 
     def __init__(self, name: str, numPorts: int):
         self.m_name = name
         self.m_numPorts = numPorts
+        self.m_portIndex = 0
 
     def getNetworks(self, networks):
         for network in networks:
@@ -187,6 +190,9 @@ class Router:
 
     def addNetwork(self, network: Network):
         self.m_networks.append(network)
+        newPath = RouterPath(network, self.m_portIndex, True)
+        self.m_portIndex += 1
+        self.m_routerTable.append(newPath)
 
     def getResultStr(self):
         strResult = (self.m_name + ", " +
@@ -204,6 +210,13 @@ class Router:
 
         return strResult + strNetworks
 
+    def getRouterTableResultStr(self):
+
+        strResult = ""
+        for routerPath in self.m_routerTable:
+            strResult += self.m_name + ", " + str(routerPath) + "\n"
+        return strResult
+
     def __str__(self):
         strResult =  ("Name: " + self.m_name + "\n" +
                         "Ports: " + str(self.m_numPorts) + "\n")
@@ -214,4 +227,21 @@ class Router:
             strNetworks += "Network " + str(i) + ": " + str(network) + "\n"
             i += 1
 
-        return strResult + strNetw
+        return strResult + strNetworks
+
+class RouterPath:
+
+    m_network = None #Network
+    m_mask = None    #Net Addr Mask
+    m_nextHop = None #Router
+    m_port = 0
+
+    def __init__(self, network: Network, port: int, isDirect: bool):
+        self.m_network = network
+        self.m_port = port
+        if isDirect:
+            self.m_nextHop = Address("0.0.0.0")
+        self.m_mask = network.m_ipAddress.getMask()
+
+    def __str__(self):
+         return str(self.m_network.m_ipAddress.m_address) + ", " + str(self.m_mask) + ", " + str(self.m_nextHop) + ", " + str(self.m_port)
