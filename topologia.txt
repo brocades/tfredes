@@ -1,9 +1,15 @@
 #NETWORK
-net1, 50
-net2, 50
-net3, 50
-net4, 50
+net1, 250
+net2, 120
+net3, 60
+net4, 12
+net5, 14
+net6, 10
+net7, 5
+net8, 4
 #ROUTER
-r1, 2, net1, net2
-r2, 2, net2, net3
-r3, 2, net3, net4
+r1, 3, net1, net3, net2
+r2, 3, net3, net4, net5
+r3, 2, net1, net3
+r4, 3, net4, net7, net6
+r5, 2, net6, net8

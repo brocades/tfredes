@@ -131,6 +131,7 @@ print("\n" + "--- RESULT ---" + "\n")
 print("#NETWORK")
 for network in g_networks:
     print(network.getResultStr())
+
 print("#ROUTER")
 for router in g_routers:
     router.getNetworks(g_networks)

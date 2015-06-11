@@ -1,5 +1,3 @@
-__author__ = 'Gabriel Rubin'
-
 class Address:
 
     #regions:
@@ -126,6 +124,8 @@ class Network:
     m_index = 0
 
     m_routers = []
+    m_routersAddress = []
+    m_routerAddressIndex = 0
 
     m_ipAddress = None
     m_addressRangeStart = None
@@ -136,6 +136,8 @@ class Network:
         self.m_numNodes = numNodes
         self.m_index = index
         self.m_routers = []
+        self.m_routerAddresses = []
+        self.m_routerAddressIndex = 0
 
     def setIP(self, ipAddress: IPAddress):
         self.m_ipAddress = ipAddress
@@ -144,11 +146,11 @@ class Network:
 
     def addRouter(self, router):
         self.m_routers.append(router)
+        self.m_routerAddresses.append(self.m_addressRangeStart.getOffsetAddress(self.m_routerAddressIndex))
+        self.m_routerAddressIndex += 1
 
-    def getRouterAddress(self, router, port):
-        for otherRouter in self.m_routers:
-            if router.m_name == otherRouter.m_name:
-                return self.m_addressRangeStart.getOffsetAddress(port)
+    def getRouterAddress(self, router):
+        return self.m_routerAddresses[self.m_routers.index(router)]
 
     def getResultStr(self):
         return (self.m_name + ", " +
@@ -157,9 +159,13 @@ class Network:
                 str(self.m_addressRangeStart) + "-" +
                 str(self.m_addressRangeFinish))
 
-    def getRouterStr(self, port):
-        return (str(self.m_addressRangeStart.getOffsetAddress(port)) + ", " +
-                str(self.m_ipAddress.getMask()))
+    def getRouterStr(self, router):
+
+        return (str(self.getRouterAddress(router)) + ", " +
+                str(self.m_name))
+
+        #return (str(self.getRouterAddress(router)) + ", " +
+        #        str(self.m_ipAddress.getMask()))
 
     def __str__(self):
         return ("Name: " + self.m_name + "\n" +
@@ -201,13 +207,14 @@ class Router:
         self.m_routerTable = [] #collection of RouterPath
 
     def getNetworks(self, networks):
-        for network in networks:
-            if network.m_name in self.m_networkNames:
-                self.addNetwork(network)
+        for netName in self.m_networkNames:
+            for network in networks:
+                if netName == network.m_name:
+                    self.addNetwork(network)
 
     def addNetwork(self, network: Network):
         self.m_networks.append(network)
-        network.m_routers.append(self)
+        network.addRouter(self)
         newPath = RouterPath(network, self.m_portIndex, True)
         self.m_portIndex += 1
         self.m_routerTable.append(newPath)
@@ -224,22 +231,50 @@ class Router:
 
         hopFinder = NextHopFinder()
 
+        candidates = []
+
         for network in networks:
             if network not in self.m_networks:
+
                 for myNetwork in self.m_networks:
                     nextHop = hopFinder.findNextHop(self.m_name, myNetwork, network)
                     if nextHop is None:
                         continue
                     else:
-                        self.addToRouterTable(network, myNetwork, nextHop, self.getNetworkPort(myNetwork))
+                        self.addToRouterTable(network, myNetwork, nextHop[0], nextHop[1], self.getNetworkPort(myNetwork))
 
-    def addToRouterTable(self, network: Network, myNetwork, pathRouter, port):
+
+
+    def addToRouterTable(self, network: Network, myNetwork, pathRouter, length, port):
 
         newRouterEntry = RouterPath(network, port, False)
-        newRouterEntry.m_nextHop = myNetwork.getRouterAddress(pathRouter, port)
-        #newRouterEntry.m_port = port
-        self.m_routerTable.append(newRouterEntry)
+        newRouterEntry.m_nextHop = myNetwork.getRouterAddress(pathRouter)
+        newRouterEntry.m_length = length
 
+        if(self.existInRouterTable(network)):
+            self.updateTable(newRouterEntry)
+        else:
+            self.m_routerTable.append(newRouterEntry)
+
+    def existInRouterTable(self, network):
+        for path in self.m_routerTable:
+            if path.m_network == network:
+                return True
+        return False
+
+    def updateTable(self, newPath):
+        index = -1
+        for path in self.m_routerTable:
+            if path.m_network == newPath.m_network and path.m_length >= newPath.m_length:
+                #print(path.m_network.m_name + ": " + str(path.m_length) + " vs " + newPath.m_network.m_name + ": " + str(newPath.m_length))
+                index = self.m_routerTable.index(path)
+
+        if index >= 0:
+            self.m_routerTable[index] = newPath
+            #print( self.m_routerTable[index].m_network.m_name + ": " + str( self.m_routerTable[index].m_length) + " vs " + newPath.m_network.m_name + ": " + str(newPath.m_length))
+            return True
+
+        return False
 
     def getResultStr(self):
         strResult = (self.m_name + ", " +
@@ -252,7 +287,7 @@ class Router:
         for network in self.m_networks:
             if start > 0:
                 strNetworks += ", "
-            strNetworks += network.getRouterStr(self.getNetworkPort(network))
+            strNetworks += network.getRouterStr(self)
             start += 1
 
         return strResult + strNetworks
@@ -282,6 +317,7 @@ class RouterPath:
     m_mask = None    #Net Addr Mask
     m_nextHop = None #Router
     m_port = 0
+    m_length = 0
 
     def __init__(self, network: Network, port: int, isDirect: bool):
         self.m_network = network
@@ -289,9 +325,11 @@ class RouterPath:
         if isDirect:
             self.m_nextHop = Address("0.0.0.0")
         self.m_mask = network.m_ipAddress.getMask()
+        self.m_length = 0
 
     def __str__(self):
-         return str(self.m_network.m_ipAddress.m_address) + ", " + str(self.m_mask) + ", " + str(self.m_nextHop) + ", " + str(self.m_port)
+        return str(self.m_network.m_name) + ", " + str(self.m_nextHop) + ", " + str(self.m_port)
+        #return str(self.m_network.m_ipAddress.m_address) + ", " + str(self.m_mask) + ", " + str(self.m_nextHop) + ", " + str(self.m_port)
 
 class NextHopFinder:
 
@@ -307,22 +345,24 @@ class NextHopFinder:
 
             startRouter = netRouter
 
-            toVisitRouters.append(netRouter)
+            toVisitRouters.append((netRouter, 1))
 
             while len(toVisitRouters) > 0:
                 targetRouter = toVisitRouters.pop()
 
-                if targetRouter in visitedRouters or targetRouter.m_name == startRouterName:
+                if targetRouter[0] in visitedRouters or targetRouter[0].m_name == startRouterName:
                     continue
 
-                for routerNetwork in targetRouter.m_networks:
+                for routerNetwork in targetRouter[0].m_networks:
                     if routerNetwork.m_name == targetNetwork.m_name:
-                        return startRouter
+                        #print(startRouter.m_name + " -- " + str(targetRouter[1]))
+                        return (startRouter, targetRouter[1])
 
-                for routerNetwork in targetRouter.m_networks:
+                for routerNetwork in targetRouter[0].m_networks:
                     for otherRouter in routerNetwork.m_routers:
-                        toVisitRouters.append(otherRouter)
+                        newTarget = targetRouter[1] + 1
+                        toVisitRouters.append((otherRouter, newTarget))
 
-                visitedRouters.append(targetRouter)
+                visitedRouters.append(targetRouter[0])
 
         return None
