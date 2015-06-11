@@ -137,4 +137,5 @@ for router in g_routers:
     print(router.getResultStr())
 print("#ROUTERTABLE")
 for router in g_routers:
+    router.getRemainingNetworks(g_networks)
     print(router.getRouterTableResultStr())

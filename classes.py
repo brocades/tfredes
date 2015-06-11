@@ -125,6 +125,8 @@ class Network:
     m_numNodes = 0
     m_index = 0
 
+    m_routers = []
+
     m_ipAddress = None
     m_addressRangeStart = None
     m_addressRangeFinish = None
@@ -133,11 +135,20 @@ class Network:
         self.m_name = name
         self.m_numNodes = numNodes
         self.m_index = index
+        self.m_routers = []
 
     def setIP(self, ipAddress: IPAddress):
         self.m_ipAddress = ipAddress
         self.m_addressRangeStart = ipAddress.m_address.getOffsetAddress(1);
         self.m_addressRangeFinish = ipAddress.m_address.getOffsetAddress(self.m_numNodes)
+
+    def addRouter(self, router):
+        self.m_routers.append(router)
+
+    def getRouterAddress(self, router, port):
+        for otherRouter in self.m_routers:
+            if router.m_name == otherRouter.m_name:
+                return self.m_addressRangeStart.getOffsetAddress(port)
 
     def getResultStr(self):
         return (self.m_name + ", " +
@@ -146,8 +157,8 @@ class Network:
                 str(self.m_addressRangeStart) + "-" +
                 str(self.m_addressRangeFinish))
 
-    def getRouterStr(self):
-        return (str(self.m_addressRangeStart) + ", " +
+    def getRouterStr(self, port):
+        return (str(self.m_addressRangeStart.getOffsetAddress(port)) + ", " +
                 str(self.m_ipAddress.getMask()))
 
     def __str__(self):
@@ -156,6 +167,9 @@ class Network:
                 "IP: " + str(self.m_ipAddress) + "\n" +
                 "Address Start: " + str(self.m_addressRangeStart) + "\n" +
                 "Address Finish: " + str(self.m_addressRangeFinish))
+
+    def __eq__(self, other):
+        return self.m_name == other.m_name
 
     def __lt__(self, other):
         return self.m_numNodes.__lt__(other.m_numNodes)
@@ -182,6 +196,9 @@ class Router:
         self.m_name = name
         self.m_numPorts = numPorts
         self.m_portIndex = 0
+        self.m_networkNames = []
+        self.m_networks = []
+        self.m_routerTable = [] #collection of RouterPath
 
     def getNetworks(self, networks):
         for network in networks:
@@ -190,9 +207,39 @@ class Router:
 
     def addNetwork(self, network: Network):
         self.m_networks.append(network)
+        network.m_routers.append(self)
         newPath = RouterPath(network, self.m_portIndex, True)
         self.m_portIndex += 1
         self.m_routerTable.append(newPath)
+
+    def haveNetwork(self, network: Network):
+        return network in self.m_networks
+
+    def getNetworkPort(self, network: Network):
+        for routerPath in self.m_routerTable:
+            if network.m_name == routerPath.m_network.m_name:
+                return routerPath.m_port
+
+    def getRemainingNetworks(self, networks):
+
+        hopFinder = NextHopFinder()
+
+        for network in networks:
+            if network not in self.m_networks:
+                for myNetwork in self.m_networks:
+                    nextHop = hopFinder.findNextHop(self.m_name, myNetwork, network)
+                    if nextHop is None:
+                        continue
+                    else:
+                        self.addToRouterTable(network, myNetwork, nextHop, self.getNetworkPort(myNetwork))
+
+    def addToRouterTable(self, network: Network, myNetwork, pathRouter, port):
+
+        newRouterEntry = RouterPath(network, port, False)
+        newRouterEntry.m_nextHop = myNetwork.getRouterAddress(pathRouter, port)
+        #newRouterEntry.m_port = port
+        self.m_routerTable.append(newRouterEntry)
+
 
     def getResultStr(self):
         strResult = (self.m_name + ", " +
@@ -205,7 +252,7 @@ class Router:
         for network in self.m_networks:
             if start > 0:
                 strNetworks += ", "
-            strNetworks += network.getRouterStr()
+            strNetworks += network.getRouterStr(self.getNetworkPort(network))
             start += 1
 
         return strResult + strNetworks
@@ -245,3 +292,37 @@ class RouterPath:
 
     def __str__(self):
          return str(self.m_network.m_ipAddress.m_address) + ", " + str(self.m_mask) + ", " + str(self.m_nextHop) + ", " + str(self.m_port)
+
+class NextHopFinder:
+
+    def findNextHop(self, startRouterName, startNetwork: Network, targetNetwork: Network):
+
+        for netRouter in startNetwork.m_routers:
+
+            if netRouter.m_name == startRouterName:
+                continue
+
+            toVisitRouters = []
+            visitedRouters = []
+
+            startRouter = netRouter
+
+            toVisitRouters.append(netRouter)
+
+            while len(toVisitRouters) > 0:
+                targetRouter = toVisitRouters.pop()
+
+                if targetRouter in visitedRouters or targetRouter.m_name == startRouterName:
+                    continue
+
+                for routerNetwork in targetRouter.m_networks:
+                    if routerNetwork.m_name == targetNetwork.m_name:
+                        return startRouter
+
+                for routerNetwork in targetRouter.m_networks:
+                    for otherRouter in routerNetwork.m_routers:
+                        toVisitRouters.append(otherRouter)
+
+                visitedRouters.append(targetRouter)
+
+        return None
